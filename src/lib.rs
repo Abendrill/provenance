@@ -79,16 +79,16 @@
 //! assert_eq!("Swedish Krona".to_string(), currencies.get(sum.currency).name);
 //! ```
 
+use std::sync::LazyLock;
 use std::{
+    any::TypeId,
     collections::HashSet,
-    marker::PhantomData,
-    any::{TypeId},
     fmt::{Debug, Formatter},
-    sync::Mutex,
+    hash::{Hash, Hasher},
+    marker::PhantomData,
     ops::DerefMut,
-    hash::{Hash, Hasher}
+    sync::Mutex,
 };
-use lazy_static::lazy_static;
 
 /// A provenance map is a map-like data structure that know which keys belong
 /// to which map.
@@ -132,11 +132,10 @@ use lazy_static::lazy_static;
 ///
 
 pub struct ProvenanceMap<Value> {
-    map: SeparateProvenanceMap<Value, Value>
+    map: SeparateProvenanceMap<Value, Value>,
 }
 
 impl<Value: 'static> ProvenanceMap<Value> {
-
     /// Create a new map if one with the given signature have not already been created.
     /// If one has, [`None`](std::option::Option::None) is returned.
     /// ```
@@ -153,9 +152,7 @@ impl<Value: 'static> ProvenanceMap<Value> {
     pub fn new() -> Option<ProvenanceMap<Value>> {
         let map = SeparateProvenanceMap::new()?;
 
-        Some(ProvenanceMap {
-            map
-        })
+        Some(ProvenanceMap { map })
     }
 
     /// Insert a value into the map.
@@ -357,8 +354,7 @@ pub struct SeparateProvenanceMap<Provenance, Value> {
     _pd: PhantomData<Provenance>,
 }
 
-impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Value> {
-
+impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
     /// Creates a new empty map with some type as provenance.
     ///
     /// If a map with such provenance already has been created, [`None`](std::option::Option::None) will be returned.
@@ -377,26 +373,25 @@ impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Valu
     /// assert!(map.is_none());
     /// ```
     pub fn new() -> Option<SeparateProvenanceMap<Provenance, Value>> {
-        lazy_static! {
-            static ref USED_PROVENANCE: Mutex<HashSet<TypeId>> = Mutex::new(Default::default());
-        }
+        static USED_PROVENANCE: LazyLock<Mutex<HashSet<TypeId>>> =
+            LazyLock::new(|| Mutex::new(Default::default()));
 
-        let used_maps: &Mutex<HashSet<TypeId>> = &*USED_PROVENANCE;
-        let mut lock = used_maps.lock().unwrap();
+        let mut lock = USED_PROVENANCE
+            .lock()
+            .expect("USED_PROVENANCE mutex should never be poisoned");
         let used_maps = lock.deref_mut();
 
-
         let type_id = TypeId::of::<Provenance>();
+        let is_first_use = used_maps.insert(type_id);
 
-        if used_maps.contains(&type_id) {
-            None
-        } else {
-            used_maps.insert(type_id);
-            Some(SeparateProvenanceMap {
-                elements: vec![],
-                _pd: Default::default()
-            })
+        if !is_first_use {
+            return None;
         }
+
+        Some(SeparateProvenanceMap {
+            elements: vec![],
+            _pd: Default::default(),
+        })
     }
 
     /// Insert a value into this map.
@@ -471,8 +466,7 @@ impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Valu
     /// assert_eq!(3, map.keys().count());
     /// ```
     pub fn keys(&self) -> impl Iterator<Item = Key<Provenance>> {
-        (0..self.elements.len())
-            .map(Key::new)
+        (0..self.elements.len()).map(Key::new)
     }
 
     /// Get an [iterator](Iterator) over immutable references to each value in the map.
@@ -538,7 +532,7 @@ impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Valu
     pub fn find<P: Fn(&Value) -> bool>(&self, predicate: P) -> Option<&Value> {
         for value in self.elements.iter() {
             if predicate(value) {
-                return Some(value)
+                return Some(value);
             }
         }
 
@@ -573,7 +567,7 @@ impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Valu
     pub fn find_mut<P: Fn(&Value) -> bool>(&mut self, predicate: P) -> Option<&mut Value> {
         for value in self.elements.iter_mut() {
             if predicate(value) {
-                return Some(value)
+                return Some(value);
             }
         }
 
@@ -592,7 +586,7 @@ impl<Provenance: 'static, Value: 'static> SeparateProvenanceMap<Provenance, Valu
 /// reference a value in that map.
 pub struct Key<Provenance> {
     index: usize,
-    _pd: PhantomData<*const Provenance>,
+    _pd: PhantomData<Provenance>,
 }
 
 impl<Provenance> Key<Provenance> {
@@ -603,7 +597,7 @@ impl<Provenance> Key<Provenance> {
     fn new(index: usize) -> Self {
         Key {
             index,
-            _pd: Default::default()
+            _pd: Default::default(),
         }
     }
 }
@@ -612,7 +606,7 @@ impl<Provenance> Key<Provenance> {
 
 impl<Provenance> Debug for Key<Provenance> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MapKey({})", self.index)
+        write!(f, "Key({})", self.index)
     }
 }
 
