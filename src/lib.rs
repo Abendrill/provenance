@@ -79,6 +79,7 @@
 //! assert_eq!("Swedish Krona".to_string(), currencies.get(sum.currency).name);
 //! ```
 
+use mitsein::vec1::Vec1;
 use std::sync::LazyLock;
 use std::{
     any::TypeId,
@@ -206,6 +207,14 @@ impl<Value: 'static> ProvenanceMap<Value> {
         self.map.get_mut(key)
     }
 
+    pub fn entries(&self) -> impl Iterator<Item = (Key<Value>, &Value)> {
+        self.map.entries()
+    }
+
+    pub fn entries_mut(&mut self) -> impl Iterator<Item = (Key<Value>, &mut Value)> {
+        self.map.entries_mut()
+    }
+
     /// Get an [iterator](Iterator) over all keys in the map.
     /// ```
     /// use provenance::ProvenanceMap;
@@ -307,6 +316,55 @@ impl<Value: 'static> ProvenanceMap<Value> {
     pub fn find_mut<P: Fn(&Value) -> bool>(&mut self, predicate: P) -> Option<&mut Value> {
         self.map.find_mut(predicate)
     }
+
+    pub fn transform(&self) -> ProvenanceMapTransformer<'_, Value> {
+        ProvenanceMapTransformer::new_from(self)
+    }
+}
+
+pub struct ProvenanceMapTransformer<'map, Value, const TRANSFORMED_REFERENCES: usize = 0> {
+    inner: SeparateProvenanceMapTransformer<'map, Value, Value, TRANSFORMED_REFERENCES>,
+}
+
+impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value, 0> {
+    fn new_from(map: &'map ProvenanceMap<Value>) -> ProvenanceMapTransformer<'map, Value, 0> {
+        ProvenanceMapTransformer {
+            inner: SeparateProvenanceMapTransformer::new_from(&map.map),
+        }
+    }
+}
+
+impl<'map, Value: 'static, const TRANSFORMED_REFERENCES: usize>
+    ProvenanceMapTransformer<'map, Value, TRANSFORMED_REFERENCES>
+{
+    pub fn with_references<const N: usize>(
+        self,
+        references: [Key<Value>; N],
+    ) -> ProvenanceMapTransformer<'map, Value, N> {
+        ProvenanceMapTransformer {
+            inner: self.inner.with_references(references),
+        }
+    }
+
+    pub fn with_transform<NewValue: 'static, Error>(
+        self,
+        transform: impl FnMut(&Value, fn(Key<Value>) -> Key<NewValue>) -> Result<NewValue, Error>,
+    ) -> Result<
+        (
+            [Key<NewValue>; TRANSFORMED_REFERENCES],
+            ProvenanceMap<NewValue>,
+        ),
+        MapTransformError<Value, Error>,
+    > {
+        self.inner
+            .with_transform(transform)
+            .map(|(keys, map)| (keys, ProvenanceMap { map }))
+    }
+}
+
+pub enum MapTransformError<Provenance, Error> {
+    ProvenanceUsed,
+    MappingErrors(Vec1<(Key<Provenance>, Error)>),
 }
 
 /// A [ProvenanceMap](ProvenanceMap) where the a type separate from the type of the stored
@@ -453,6 +511,20 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
         &mut self.elements[key.index]
     }
 
+    pub fn entries(&self) -> impl Iterator<Item = (Key<Provenance>, &Value)> {
+        self.elements
+            .iter()
+            .enumerate()
+            .map(|(index, value)| (Key::new(index), value))
+    }
+
+    pub fn entries_mut(&mut self) -> impl Iterator<Item = (Key<Provenance>, &mut Value)> {
+        self.elements
+            .iter_mut()
+            .enumerate()
+            .map(|(index, value)| (Key::new(index), value))
+    }
+
     /// Get an [iterator](Iterator) over all keys in the map.
     /// ```
     /// use provenance::SeparateProvenanceMap;
@@ -466,7 +538,7 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
     /// assert_eq!(3, map.keys().count());
     /// ```
     pub fn keys(&self) -> impl Iterator<Item = Key<Provenance>> {
-        (0..self.elements.len()).map(Key::new)
+        self.entries().map(|(k, _)| k)
     }
 
     /// Get an [iterator](Iterator) over immutable references to each value in the map.
@@ -572,6 +644,90 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
         }
 
         None
+    }
+
+    pub fn transform(&self) -> SeparateProvenanceMapTransformer<'_, Provenance, Value> {
+        SeparateProvenanceMapTransformer::new_from(self)
+    }
+}
+
+pub struct SeparateProvenanceMapTransformer<
+    'map,
+    Provenance,
+    Value,
+    const TRANSFORMED_REFERENCES: usize = 0,
+> {
+    map: &'map SeparateProvenanceMap<Provenance, Value>,
+    references: [Key<Value>; TRANSFORMED_REFERENCES],
+}
+
+impl<'map, Provenance: 'static, Value>
+    SeparateProvenanceMapTransformer<'map, Provenance, Value, 0>
+{
+    fn new_from(
+        map: &'map SeparateProvenanceMap<Provenance, Value>,
+    ) -> SeparateProvenanceMapTransformer<'map, Provenance, Value, 0> {
+        SeparateProvenanceMapTransformer {
+            references: [],
+            map,
+        }
+    }
+}
+
+impl<'map, Provenance: 'static, Value, const TRANSFORMED_REFERENCES: usize>
+    SeparateProvenanceMapTransformer<'map, Provenance, Value, TRANSFORMED_REFERENCES>
+{
+    pub fn with_references<const N: usize>(
+        self,
+        references: [Key<Value>; N],
+    ) -> SeparateProvenanceMapTransformer<'map, Provenance, Value, N> {
+        SeparateProvenanceMapTransformer {
+            references,
+            map: self.map,
+        }
+    }
+
+    pub fn with_transform<NewProvenance: 'static, NewValue, Error>(
+        self,
+        mut transform: impl FnMut(&Value, fn(Key<Value>) -> Key<NewValue>) -> Result<NewValue, Error>,
+    ) -> Result<
+        (
+            [Key<NewProvenance>; TRANSFORMED_REFERENCES],
+            SeparateProvenanceMap<NewProvenance, NewValue>,
+        ),
+        MapTransformError<Provenance, Error>,
+    > {
+        let mut new_map = SeparateProvenanceMap::<NewProvenance, NewValue>::new()
+            .ok_or(MapTransformError::ProvenanceUsed)?;
+        let mut errors = Vec::new();
+
+        fn transform_key<OldValue, NewValue>(key: Key<OldValue>) -> Key<NewValue> {
+            Key::new(key.index)
+        }
+
+        for (key, value) in self.map.entries() {
+            match transform(value, transform_key) {
+                Ok(new_value) => {
+                    let new_key = new_map.insert(new_value);
+
+                    // if there has been no errors, then the key indicies must match
+                    // otherwise the guarantee that transformed references should work
+                    // would be broken
+                    debug_assert!((!errors.is_empty()) || (key.index == new_key.index));
+                }
+                Err(error) => {
+                    errors.push((key, error));
+                }
+            }
+        }
+
+        if let Some(errors) = Vec1::try_from(errors).ok() {
+            return Err(MapTransformError::MappingErrors(errors));
+        }
+
+        let new_keys = self.references.map(transform_key);
+
+        Ok((new_keys, new_map))
     }
 }
 
