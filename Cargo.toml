@@ -1,6 +1,6 @@
 [package]
 name = "provenance"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Jesper Larsson"]
 edition = "2024"
 description = "Container structures that generate key upon insertion that only works with the map that generated it."
