@@ -38,7 +38,7 @@ fn transform_key<OldValue, NewValue>(key: Key<OldValue>) -> Key<NewValue> {
 }
 
 impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Provenance, Value> {
-    fn new_from(
+    pub(crate) fn new_from(
         map: &'map SeparateProvenanceMap<Provenance, Value>,
     ) -> SeparateProvenanceMapTransformer<'map, Provenance, Value> {
         SeparateProvenanceMapTransformer { map }
@@ -110,19 +110,12 @@ impl<'map, Provenance: 'static, Value, const REFERENCES: usize>
     }
 }
 
-impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
-    pub fn transform(&self) -> SeparateProvenanceMapTransformer<'_, Provenance, Value> {
-        SeparateProvenanceMapTransformer::new_from(self)
-    }
-}
-
-
 pub struct ProvenanceMapTransformer<'map, Value> {
     inner: SeparateProvenanceMapTransformer<'map, Value, Value>,
 }
 
 impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value> {
-    fn new_from(
+    pub(crate) fn new_from(
         map: &'map ProvenanceMap<Value>,
     ) -> ProvenanceMapTransformer<'map, Value> {
         ProvenanceMapTransformer { inner: SeparateProvenanceMapTransformer::new_from(&map.inner) }
@@ -160,11 +153,5 @@ ProvenanceAndReferencesMapTransformer<'map, Value, REFERENCES>
         transform: impl FnMut(&Value, fn(Key<Value>) -> Key<NewValue>) -> Result<NewValue, Error>,
     ) -> MapAndReferenceTransformResult<NewValue, Value, Error, REFERENCES> {
         self.inner.with_transform(transform)
-    }
-}
-
-impl<Value: 'static> ProvenanceMap<Value> {
-    pub fn transform(&self) -> ProvenanceMapTransformer<'_, Value> {
-        ProvenanceMapTransformer::new_from(self)
     }
 }

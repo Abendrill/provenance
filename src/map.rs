@@ -1,4 +1,4 @@
-use crate::{Key, SeparateProvenanceMap};
+use crate::{Key, ProvenanceMapTransformer, SeparateProvenanceMap};
 
 /// A provenance map is a map-like data structure that know which keys belong
 /// to which map.
@@ -224,5 +224,9 @@ impl<Value: 'static> ProvenanceMap<Value> {
     /// ```
     pub fn find_mut<P: Fn(&Value) -> bool>(&mut self, predicate: P) -> Option<&mut Value> {
         self.inner.find_mut(predicate)
+    }
+
+    pub fn transform(&self) -> ProvenanceMapTransformer<'_, Value> {
+        ProvenanceMapTransformer::new_from(self)
     }
 }

@@ -1,4 +1,4 @@
-use crate::Key;
+use crate::{Key, SeparateProvenanceMapTransformer};
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::marker::PhantomData;
@@ -282,5 +282,9 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
         }
 
         None
+    }
+
+    pub fn transform(&self) -> SeparateProvenanceMapTransformer<'_, Provenance, Value> {
+        SeparateProvenanceMapTransformer::new_from(self)
     }
 }
