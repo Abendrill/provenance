@@ -255,6 +255,57 @@ impl<Value: 'static> ProvenanceMap<Value> {
         self.inner.find_mut(predicate)
     }
 
+    /// Start a transform clone of the map.
+    ///
+    /// During a transform, all elements of the map are mapped to a new type.
+    /// Keys can also be mapped over to the corresponding key in the new map.
+    ///
+    /// This enables initialisation of complex self-referential structures.
+    ///
+    /// ```
+    /// use std::convert::Infallible;
+    /// use provenance::{ProvenanceMap, Key};
+    ///
+    /// #[derive(Debug)]
+    /// struct InitializationNode {
+    ///     name: &'static str,
+    ///     previous: Option<Key<InitializationNode>>
+    /// }
+    ///
+    /// #[derive(Debug)]
+    /// struct Node {
+    ///     name: &'static str,
+    ///     previous: Key<Node>,
+    /// }
+    ///
+    /// let mut init_map = ProvenanceMap::new().unwrap();
+    ///
+    /// let first_init_node_key = init_map.insert(InitializationNode { name: "first", previous: None });
+    /// let second_init_node_key = init_map.insert(InitializationNode { name: "second", previous: Some(first_init_node_key) });
+    ///
+    /// let (map, [first_node_key]) = init_map
+    ///     .transform()
+    ///     .with_references([first_init_node_key])
+    ///     .with_transform(|element, key_mapper| {
+    ///         // only the first node had no previous set, set it to the last key
+    ///         // to create a complete circle of previous references
+    ///         let old_key = element.previous.unwrap_or(second_init_node_key);
+    ///         let new_key = key_mapper(old_key);
+    ///         let new_node = Node { name: element.name, previous: new_key };
+    ///         Ok::<_, Infallible>(new_node) // transform is allowed to fail, but we don't need it here
+    ///     }).unwrap();
+    ///
+    /// let first_node = map.get(first_node_key);
+    /// assert_eq!(first_node.name, "first");
+    ///
+    /// let second_node = map.get(first_node.previous);
+    /// assert_eq!(second_node.name, "second");
+    ///
+    /// let first_node_again = map.get(second_node.previous);
+    /// assert_eq!(first_node_again.name, "first");
+    /// ```
+    ///
+    /// Just like when creating a new stand alone map, the provenance must be unique.
     pub fn transform(&self) -> ProvenanceMapTransformer<'_, Value> {
         ProvenanceMapTransformer::new_from(self)
     }
