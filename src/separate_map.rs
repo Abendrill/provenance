@@ -149,6 +149,22 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
         &mut self.elements[key.index]
     }
 
+    /// Get an [iterator](Iterator) over all entries in the map.
+    /// ```
+    /// use provenance::SeparateProvenanceMap;
+    /// struct Provenance;
+    /// let mut map = SeparateProvenanceMap::<Provenance, i32>::new().unwrap();
+    ///
+    /// let key1 = map.insert(1);
+    /// let key2 = map.insert(2);
+    /// let key3 = map.insert(3);
+    ///
+    /// let mut entries = map.entries();
+    /// assert_eq!(Some((key1, &1)), entries.next());
+    /// assert_eq!(Some((key2, &2)), entries.next());
+    /// assert_eq!(Some((key3, &3)), entries.next());
+    /// assert_eq!(None, entries.next());
+    /// ```
     pub fn entries(&self) -> impl Iterator<Item = (Key<Provenance>, &Value)> {
         self.elements
             .iter()
@@ -156,6 +172,22 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
             .map(|(index, value)| (Key::new(index), value))
     }
 
+    /// Get an [iterator](Iterator) over mutable references to all entries in the map.
+    /// ```
+    /// use provenance::SeparateProvenanceMap;
+    /// struct Provenance;
+    /// let mut map = SeparateProvenanceMap::<Provenance, i32>::new().unwrap();
+    ///
+    /// let key1 = map.insert(1);
+    /// let key2 = map.insert(2);
+    /// let key3 = map.insert(3);
+    ///
+    /// let mut entries = map.entries_mut();
+    /// assert_eq!(Some((key1, &mut 1)), entries.next());
+    /// assert_eq!(Some((key2, &mut 2)), entries.next());
+    /// assert_eq!(Some((key3, &mut 3)), entries.next());
+    /// assert_eq!(None, entries.next());
+    /// ```
     pub fn entries_mut(&mut self) -> impl Iterator<Item = (Key<Provenance>, &mut Value)> {
         self.elements
             .iter_mut()
