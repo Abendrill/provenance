@@ -2,7 +2,7 @@ use crate::{Key, ProvenanceMap, SeparateProvenanceMap};
 use mitsein::prelude::Vec1;
 use thiserror::Error;
 
-/// [SeparateMapTransformError](SeparateMapTransformError) represent an error that may occur
+/// [SeparateMapTransformError](SeparateMapTransformError) represents an error that may occur
 /// during a map transformation.
 #[derive(Debug, Error)]
 pub enum SeparateMapTransformError<Provenance, Error> {
@@ -46,7 +46,7 @@ pub type SeparateMapAndReferenceTransformResult<
 /// A [Result] alias for when transforming a [ProvenanceMap] and references.
 pub type MapAndReferenceTransformResult<Value, OldValue, Error, const REFERENCES: usize> = SeparateMapAndReferenceTransformResult<Value, Value, OldValue, Error, REFERENCES>;
 
-/// A [SeparateProvenanceMapTransformer](SeparateProvenanceMapTransformer) represent a yet to be exectuted map transform.
+/// A [SeparateProvenanceMapTransformer](SeparateProvenanceMapTransformer) represents a yet to be exectuted map transform.
 ///
 /// It is created through [SeparateProvenanceMap::transform](SeparateProvenanceMap::transform).
 ///
@@ -58,14 +58,14 @@ pub struct SeparateProvenanceMapTransformer<'map, Provenance, Value> {
 
 /// Maps a key from one map to another.
 ///
-/// **IMPORTANT**: must only be used when it is guranteed that the
+/// **IMPORTANT**: must only be used when it is guaranteed that the
 /// same index maps to corresponding elements in the two maps.
 fn transform_key<OldValue, NewValue>(key: Key<OldValue>) -> Key<NewValue> {
     Key::new(key.index)
 }
 
 impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Provenance, Value> {
-    /// Convience function to create a new transformer that references a map.
+    /// Convenience function to create a new transformer that references a map.
     pub(crate) fn new_from(
         map: &'map SeparateProvenanceMap<Provenance, Value>,
     ) -> SeparateProvenanceMapTransformer<'map, Provenance, Value> {
@@ -74,7 +74,7 @@ impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Pr
 
     /// Add references to the transform.
     ///
-    /// Useful when one want to keep track of a key (not held by an element) across the transform.
+    /// Useful when one wants to keep track of a key (not held by an element) across the transform.
     pub fn with_references<const N: usize>(
         self,
         references: [Key<Provenance>; N],
@@ -88,11 +88,11 @@ impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Pr
     /// Execute this transform with the provided closure.
     ///
     /// Note, the closure takes two arguments.
-    /// The first argument is the element to transformed.
-    /// The second argument is function that the transform can use to map old keys to corresponding new ones.
+    /// The first argument is the element to be transformed.
+    /// The second argument is a function that the transform can use to map old keys to corresponding new ones.
     ///
     /// The closure may return an error.
-    /// If any element transformation result in an error, the entire transformation fails.
+    /// If any element transformation results in an error, the entire transformation fails.
     /// All element transformation errors are collected and returned.
     ///
     /// The transformation may also fail if the provenance represented by
@@ -116,7 +116,7 @@ impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Pr
             }
         }
 
-        if let Some(errors) = Vec1::try_from(errors).ok() {
+        if let Ok(errors) = Vec1::try_from(errors) {
             return Err(SeparateMapTransformError::MappingErrors(errors));
         }
 
@@ -133,7 +133,7 @@ impl<'map, Provenance: 'static, Value> SeparateProvenanceMapTransformer<'map, Pr
     }
 }
 
-/// A [SeparateProvenanceMapAndReferencesTransformer] represent a yet to be exectuted map transform.
+/// A [SeparateProvenanceMapAndReferencesTransformer] represents a yet to be exectuted map transform.
 ///
 /// It is created through [SeparateProvenanceMapTransformer::with_references].
 ///
@@ -154,11 +154,11 @@ impl<'map, Provenance: 'static, Value, const REFERENCES: usize>
     /// Execute this transform with the provided closure.
     ///
     /// Note, the closure takes two arguments.
-    /// The first argument is the element to transformed.
-    /// The second argument is function that the transform can use to map old keys to corresponding new ones.
+    /// The first argument is the element to be transformed.
+    /// The second argument is a function that the transform can use to map old keys to corresponding new ones.
     ///
     /// The closure may return an error.
-    /// If any element transformation result in an error, the entire transformation fails.
+    /// If any element transformation results in an error, the entire transformation fails.
     /// All element transformation errors are collected and returned.
     ///
     /// The transformation may also fail if the provenance represented by
@@ -175,7 +175,7 @@ impl<'map, Provenance: 'static, Value, const REFERENCES: usize>
     }
 }
 
-/// A [ProvenanceMapTransformer](ProvenanceMapTransformer) represent a yet to be exectuted map transform.
+/// A [ProvenanceMapTransformer](ProvenanceMapTransformer) represents a yet to be exectuted map transform.
 ///
 /// It is created through [ProvenanceMap::transform](ProvenanceMap::transform).
 ///
@@ -186,7 +186,7 @@ pub struct ProvenanceMapTransformer<'map, Value> {
 }
 
 impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value> {
-    /// Convience function to create a new transformer that references a map.
+    /// Convenience function to create a new transformer that references a map.
     pub(crate) fn new_from(
         map: &'map ProvenanceMap<Value>,
     ) -> ProvenanceMapTransformer<'map, Value> {
@@ -195,7 +195,7 @@ impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value> {
 
     /// Add references to the transform.
     ///
-    /// Useful when one want to keep track of a key (not held by an element) across the transform.
+    /// Useful when one wants to keep track of a key (not held by an element) across the transform.
     pub fn with_references<const N: usize>(
         self,
         references: [Key<Value>; N],
@@ -211,11 +211,11 @@ impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value> {
     /// Execute this transform with the provided closure.
     ///
     /// Note, the closure takes two arguments.
-    /// The first argument is the element to transformed.
-    /// The second argument is function that the transform can use to map old keys to corresponding new ones.
+    /// The first argument is the element to be transformed.
+    /// The second argument is a function that the transform can use to map old keys to corresponding new ones.
     ///
     /// The closure may return an error.
-    /// If any element transformation result in an error, the entire transformation fails.
+    /// If any element transformation results in an error, the entire transformation fails.
     /// All element transformation errors are collected and returned.
     ///
     /// The transformation may also fail if the provenance represented by
@@ -229,7 +229,7 @@ impl<'map, Value: 'static> ProvenanceMapTransformer<'map, Value> {
     }
 }
 
-/// A [ProvenanceAndReferencesMapTransformer] represent a yet to be exectuted map transform.
+/// A [ProvenanceAndReferencesMapTransformer] represents a yet to be exectuted map transform.
 ///
 /// It is created through [ProvenanceMapTransformer::with_references].
 ///
@@ -244,11 +244,11 @@ ProvenanceAndReferencesMapTransformer<'map, Value, REFERENCES>
     /// Execute this transform with the provided closure.
     ///
     /// Note, the closure takes two arguments.
-    /// The first argument is the element to transformed.
-    /// The second argument is function that the transform can use to map old keys to corresponding new ones.
+    /// The first argument is the element to be transformed.
+    /// The second argument is a function that the transform can use to map old keys to corresponding new ones.
     ///
     /// The closure may return an error.
-    /// If any element transformation result in an error, the entire transformation fails.
+    /// If any element transformation results in an error, the entire transformation fails.
     /// All element transformation errors are collected and returned.
     ///
     /// The transformation may also fail if the provenance represented by

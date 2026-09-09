@@ -1,6 +1,6 @@
 use crate::{Key, ProvenanceMapTransformer, SeparateProvenanceMap};
 
-/// A provenance map is a map-like data structure that know which keys belong
+/// A provenance map is a map-like data structure that knows which keys belong
 /// to which map.
 ///
 /// Keys are generated upon inserting an element into the map.
@@ -13,7 +13,7 @@ use crate::{Key, ProvenanceMapTransformer, SeparateProvenanceMap};
 /// This is achieved by "tagging" keys with the generic type parameter of the map. So
 /// a map of type `ProvenanceMap<i32>` will create keys of type `Key<i32>`. The key
 /// does not actually contain a value of their generic type parameter. It is only used
-/// to track what map the key came from, i.e. it's provenance.
+/// to track what map the key came from, i.e. its provenance.
 /// ```compile_fail
 /// use provenance::ProvenanceMap;
 /// let mut map_1 = ProvenanceMap::<i32>::new().unwrap();
@@ -45,7 +45,7 @@ pub struct ProvenanceMap<Value> {
 }
 
 impl<Value: 'static> ProvenanceMap<Value> {
-    /// Create a new map if one with the given signature have not already been created.
+    /// Create a new map if one with the given signature has not already been created.
     /// If one has, [`None`](std::option::Option::None) is returned.
     /// ```
     /// use provenance::ProvenanceMap;
@@ -102,7 +102,7 @@ impl<Value: 'static> ProvenanceMap<Value> {
         self.inner.get(key)
     }
 
-    /// Use a [key](Key) to retrieve an mutable reference to
+    /// Use a [key](Key) to retrieve a mutable reference to
     /// a stored value.
     /// ```
     /// use provenance::ProvenanceMap;
@@ -201,7 +201,7 @@ impl<Value: 'static> ProvenanceMap<Value> {
         self.inner.iter_mut()
     }
 
-    /// Search the map in insertion order for the first value that satisfy the given predicate.
+    /// Search the map in insertion order for the first value that satisfies the given predicate.
     /// If such value is found, an immutable reference to it is returned,
     /// ```
     /// use provenance::ProvenanceMap;
@@ -228,7 +228,7 @@ impl<Value: 'static> ProvenanceMap<Value> {
         self.inner.find(predicate)
     }
 
-    /// Search the map in insertion order for the first value that satisfy the given predicate.
+    /// Search the map in insertion order for the first value that satisfies the given predicate.
     /// If such value is found, a mutable reference to it is returned,
     /// ```
     /// use provenance::ProvenanceMap;

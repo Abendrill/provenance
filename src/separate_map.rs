@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use std::ops::DerefMut;
 use std::sync::{LazyLock, Mutex};
 
-/// A [ProvenanceMap](ProvenanceMap) where the a type separate from the type of the stored
-/// values can be used to signify the maps provenance.
+/// A [ProvenanceMap](crate::ProvenanceMap) where a type separate from the type of the stored
+/// values can be used to signify the map's provenance.
 ///
 /// This allows for multiple maps that store the values of the same type to be created,
 /// as long as the type given for the `Provenance` parameter is unique.
@@ -25,13 +25,13 @@ use std::sync::{LazyLock, Mutex};
 /// assert!(map.is_some());
 /// ```
 ///
-/// A [ProvenanceMap](ProvenanceMap) can be thought of as a special case of this map
+/// A [ProvenanceMap](crate::ProvenanceMap) can be thought of as a special case of this map
 /// where the type of the stored values also is used as provenance. That is
 /// `ProvenanceMap<i32> ≈ SeparateProvenanceMap<i32, i32>`. Currently, this is how
-/// [ProvenanceMap](ProvenanceMap) is implemented. This has the effect that both
+/// [ProvenanceMap](crate::ProvenanceMap) is implemented. This has the effect that both
 /// types share the available pool of types that can be used as provenance. That
-/// means that both a `ProvenanceMap<i32>` and a `SeperateProvenanceMap<i32, B>`
-/// for any type `B` can not be constructed. This beahviour may change in future
+/// means that both a `ProvenanceMap<i32>` and a `SeparateProvenanceMap<i32, B>`
+/// for any type `B` can not be constructed. This behaviour may change in future
 /// versions and should not be relied upon.
 /// ```
 /// use provenance::{ProvenanceMap, SeparateProvenanceMap};
@@ -113,7 +113,7 @@ impl<Provenance: 'static, Value> SeparateProvenanceMap<Provenance, Value> {
     /// ```
     pub fn insert(&mut self, value: Value) -> Key<Provenance> {
         let index = self.elements.len();
-        self.elements.insert(index, value);
+        self.elements.push(value);
         Key::new(index)
     }
 

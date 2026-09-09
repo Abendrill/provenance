@@ -11,15 +11,15 @@ provenance = "0.1.0"
 
 ### Example
 ```rust
-use provenance::ProvenanceMap;
+use provenance::{ProvenanceMap, Key};
 
 fn main() {
-    let ages = ProvenanceMap::<u32>::new().unwrap();
-    let names = ProvenanceMap::<String>::new().unwrap();
+    let mut ages = ProvenanceMap::<u32>::new().unwrap();
+    let mut names = ProvenanceMap::<String>::new().unwrap();
     
     let middle_age: Key<u32> = ages.insert(40); // Key generated on insert
     assert_eq!(&40, ages.get(middle_age)); // Key is used to retrieve stored value
     
-    // names.get(middle_age); // Compile error, key can only be used with it's map
+    // names.get(middle_age); // Compile error, key can only be used with its map
 }
 ```
